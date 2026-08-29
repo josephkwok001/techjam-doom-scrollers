@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 # BM25 column weights: parent_asin, title, categories, features, details, store, description
-BM25_WEIGHTS = (0.0, 6.0, 4.0, 2.5, 2.5, 1.5, 1.0)
+BM25_WEIGHTS = (0.0, 6.0, 4.0, 4.0, 4.0, 1.5, 1.0)
 BM25_ORDER_BY = f"bm25(products, {', '.join(str(weight) for weight in BM25_WEIGHTS)})"
 
 
@@ -29,6 +29,15 @@ def _parse_price(value: object) -> float | None:
         return None
 
 
+def _parse_int(value: object) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 @dataclass(frozen=True)
 class ProductMeta:
     parent_asin: str
@@ -39,6 +48,8 @@ class ProductMeta:
     store: str
     description: str
     price: float | None
+    average_rating: float | None
+    rating_number: int | None
     searchable_text: str
 
 
@@ -83,6 +94,8 @@ class CatalogStore:
                     store=store,
                     description=description,
                     price=_parse_price(product.get("price")),
+                    average_rating=_parse_price(product.get("average_rating")),
+                    rating_number=_parse_int(product.get("rating_number")),
                     searchable_text=searchable_text,
                 )
                 batch.append((parent_asin, title, categories, features, details, store, description))
@@ -116,3 +129,7 @@ class CatalogStore:
             (fts_expression,),
         ).fetchone()
         return int(row[0]) if row else 0
+
+    @property
+    def size(self) -> int:
+        return len(self._products)
