@@ -194,6 +194,11 @@ class RerankerTest(unittest.TestCase):
         ranked = rerank_candidates(["NECK", "BRACE"], {}, query, [], store)
         self.assertEqual(ranked[0], "BRACE")
 
+    def test_soft_constraint_lines_are_scored(self) -> None:
+        query = "For that, what matters is: lightweight mesh upper."
+        ranked = rerank_candidates(["B", "A"], {}, query, [], self.store)
+        self.assertEqual(ranked[0], "A")
+
 
 class PhraseRescueTest(unittest.TestCase):
     def test_rescue_skips_short_phrases(self) -> None:

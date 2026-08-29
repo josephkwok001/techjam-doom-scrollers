@@ -265,9 +265,15 @@ python3 -m unittest tests.test_retrieval tests.test_personalization tests.test_a
 
 # Full 200-session benchmark (Pillar IV)
 python3 -m evaluator.local_evaluator
+
+# Recordable demo for Devpost video (Monday)
+python3 scripts/demo_session.py scores      # benchmark summary
+python3 scripts/demo_session.py browsing    # 3-turn scripted session
+python3 scripts/demo_session.py buying      # buying-mode session
+python3 scripts/demo_session.py replay public_0001
 ```
 
-Interactive demo and single-session replay patterns: [docs/pillars.md](docs/pillars.md#manual-testing-beyond-the-evaluator).
+Devpost copy outline: [docs/devpost_outline.md](docs/devpost_outline.md).
 
 ---
 
@@ -281,6 +287,8 @@ starter/
 scripts/
   score.py                      One evaluation run, compact metrics
   sweep.py                      Weight grid sweep over a shared catalog index
+  sweep_mrr.py                  MRR reranker knob sweep
+  demo_session.py               Recordable terminal demo for Devpost video
 tests/
   test_retrieval.py
   test_personalization.py
@@ -289,6 +297,7 @@ tests/
 docs/
   pillars.md                    Official Pillar I–IV notes + improvement matrix
   tuning_log.md                 What moved the score, and what did not
+  devpost_outline.md            Devpost + demo video script for submission
 evaluator/local_evaluator.py    Pillar IV scorer (do not edit)
 ```
 

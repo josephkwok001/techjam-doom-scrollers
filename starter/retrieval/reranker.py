@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import re
+from dataclasses import dataclass
 
 from starter.retrieval.catalog_store import CatalogStore, ProductMeta
 from starter.retrieval.filters import constraint_phrases
@@ -16,11 +17,18 @@ PRICE_EXACT_SCORE = 14.0
 PRICE_NEAR_SCORE = 3.0
 PRICE_OUTLIER_PENALTY = 5.0
 POPULARITY_WEIGHT = 2.0
+POPULARITY_CAP_RATIO = 0.5
+HARD_CONSTRAINT_WEIGHT = 2.0
+SOFT_CONSTRAINT_WEIGHT = 1.0
+FEATURE_PHRASE_BONUS = 3.0
 
 CATEGORY_RE = re.compile(r"i'?m looking for\s+([^.\n]+)", re.I)
+HARD_LINE_RE = re.compile(r"key requirement is:\s*(.+)", re.I)
+SOFT_LINE_RES = (
+    re.compile(r"what matters is:\s*(.+)", re.I),
+    re.compile(r"what i need is:\s*(.+)", re.I),
+)
 CATEGORY_NOISE = {"clothing", "item", "shoes", "jewelry"}
-# When disclosed constraints name one product type but the category path names another
-# (e.g. bracelet constraints under a Pendants path), trust the constraints.
 PRODUCT_TYPE_MARKERS: dict[str, tuple[str, ...]] = {
     "bracelet": ("bracelet", "bracelets"),
     "necklace": ("necklace", "necklaces"),
@@ -39,6 +47,12 @@ PRICE_NEAR_RATIO = 0.10
 PRICE_OUTLIER_RATIO = 1.25
 
 
+@dataclass(frozen=True)
+class WeightedPhrase:
+    text: str
+    weight: float
+
+
 def rerank_candidates(
     candidates: list[str],
     filters: dict,
@@ -49,11 +63,10 @@ def rerank_candidates(
     if not candidates:
         return []
 
-    phrases = [_normalize(phrase) for phrase in constraint_phrases(query_text, slot_values)]
-    phrases = [phrase for phrase in phrases if phrase]
-    terms = _unique_terms(phrases)
+    weighted = _weighted_phrases(query_text, slot_values)
+    terms = _unique_terms([item.text for item in weighted])
     category_tokens = _category_tokens(query_text)
-    constraint_types = _product_types_in_text(" ".join(phrases))
+    constraint_types = _product_types_in_text(" ".join(item.text for item in weighted))
     target_price = _target_price(filters, query_text)
     profile = filters.get("profile")
 
@@ -63,7 +76,7 @@ def rerank_candidates(
         if product is None:
             continue
         score = _score_product(
-            product, phrases, terms, category_tokens, constraint_types, target_price, profile
+            product, weighted, terms, category_tokens, constraint_types, target_price, profile
         )
         scored.append((score, -index, asin))
 
@@ -73,7 +86,7 @@ def rerank_candidates(
 
 def _score_product(
     product: ProductMeta,
-    phrases: list[str],
+    weighted: list[WeightedPhrase],
     terms: list[str],
     category_tokens: list[str],
     constraint_types: set[str],
@@ -81,20 +94,27 @@ def _score_product(
     profile: object = None,
 ) -> float:
     corpus = _normalize(product.searchable_text)
-    score = 0.0
+    features = _normalize(product.features)
+    constraint_score = 0.0
 
-    for phrase in phrases:
+    for item in weighted:
+        phrase = _normalize(item.text)
+        if not phrase:
+            continue
         if phrase in corpus:
-            score += EXACT_PHRASE_SCORE
+            constraint_score += item.weight * EXACT_PHRASE_SCORE
+            if phrase in features:
+                constraint_score += item.weight * FEATURE_PHRASE_BONUS
 
     for term in terms:
         if term in corpus:
-            score += TERM_MATCH_SCORE
+            constraint_score += TERM_MATCH_SCORE
 
+    score = constraint_score
     score += _category_score(product, category_tokens, constraint_types)
     score += _constraint_product_type_score(product, constraint_types)
     score += _price_score(product, target_price)
-    score += _popularity_score(product)
+    score += _capped_popularity(product, constraint_score)
 
     if profile is not None:
         from starter.personalization.rerank_boost import compute_profile_boost
@@ -104,12 +124,61 @@ def _score_product(
     return score
 
 
+def _capped_popularity(product: ProductMeta, constraint_score: float) -> float:
+    if not product.rating_number:
+        return 0.0
+    raw = POPULARITY_WEIGHT * math.log10(1 + product.rating_number)
+    if constraint_score <= 0:
+        return raw
+    return min(raw, constraint_score * POPULARITY_CAP_RATIO)
+
+
+def _weighted_phrases(query_text: str, slot_values: list[str]) -> list[WeightedPhrase]:
+    weighted: list[WeightedPhrase] = []
+    seen: set[str] = set()
+    for line in query_text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        hard = HARD_LINE_RE.search(stripped)
+        if hard:
+            for part in _split_phrase_parts(hard.group(1)):
+                key = part.lower()
+                if key not in seen:
+                    seen.add(key)
+                    weighted.append(WeightedPhrase(part, HARD_CONSTRAINT_WEIGHT))
+            continue
+        for pattern in SOFT_LINE_RES:
+            soft = pattern.search(stripped)
+            if soft:
+                for part in _split_phrase_parts(soft.group(1)):
+                    key = part.lower()
+                    if key not in seen:
+                        seen.add(key)
+                        weighted.append(WeightedPhrase(part, SOFT_CONSTRAINT_WEIGHT))
+                break
+    for phrase in constraint_phrases(query_text, slot_values):
+        key = phrase.lower()
+        if key not in seen:
+            seen.add(key)
+            weighted.append(WeightedPhrase(phrase, SOFT_CONSTRAINT_WEIGHT))
+    return weighted
+
+
+def _split_phrase_parts(raw: str) -> list[str]:
+    cleaned = raw.strip(" -;,.\t\n")
+    if not cleaned:
+        return []
+    if ";" in cleaned:
+        return [part.strip(" -;,.\t\n") for part in cleaned.split(";") if part.strip()]
+    return [cleaned]
+
+
 def _category_score(
     product: ProductMeta,
     category_tokens: list[str],
     constraint_types: set[str],
 ) -> float:
-    """Category tokens come from the target's own path, but can mislabel product type."""
     if not category_tokens:
         return 0.0
     if constraint_types and _category_conflicts_with_constraints(category_tokens, constraint_types):
@@ -176,13 +245,6 @@ def _price_score(product: ProductMeta, target_price: float | None) -> float:
     return 0.0
 
 
-def _popularity_score(product: ProductMeta) -> float:
-    """Purchased items skew popular, so review volume is a useful prior."""
-    if not product.rating_number:
-        return 0.0
-    return POPULARITY_WEIGHT * math.log10(1 + product.rating_number)
-
-
 def _category_tokens(query_text: str) -> list[str]:
     match = CATEGORY_RE.search(query_text)
     if not match:
@@ -222,7 +284,7 @@ def _content_tokens(phrase: str) -> list[str]:
 def _unique_terms(phrases: list[str]) -> list[str]:
     terms: list[str] = []
     for phrase in phrases:
-        for token in _content_tokens(phrase):
+        for token in _content_tokens(_normalize(phrase)):
             if token not in terms:
                 terms.append(token)
     return terms
