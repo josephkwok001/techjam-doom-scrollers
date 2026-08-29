@@ -10,6 +10,8 @@ from starter.retrieval.query_builder import STOPWORDS
 EXACT_PHRASE_SCORE = 10.0
 TERM_MATCH_SCORE = 1.5
 CATEGORY_MATCH_SCORE = 6.0
+PRODUCT_TYPE_MATCH_SCORE = 8.0
+PRODUCT_TYPE_MISMATCH_PENALTY = 5.0
 PRICE_EXACT_SCORE = 14.0
 PRICE_NEAR_SCORE = 3.0
 PRICE_OUTLIER_PENALTY = 5.0
@@ -17,6 +19,20 @@ POPULARITY_WEIGHT = 2.0
 
 CATEGORY_RE = re.compile(r"i'?m looking for\s+([^.\n]+)", re.I)
 CATEGORY_NOISE = {"clothing", "item", "shoes", "jewelry"}
+# When disclosed constraints name one product type but the category path names another
+# (e.g. bracelet constraints under a Pendants path), trust the constraints.
+PRODUCT_TYPE_MARKERS: dict[str, tuple[str, ...]] = {
+    "bracelet": ("bracelet", "bracelets"),
+    "necklace": ("necklace", "necklaces"),
+    "pendant": ("pendant", "pendants"),
+    "earring": ("earring", "earrings"),
+    "ring": ("ring", "rings"),
+}
+PRODUCT_TYPE_CONFLICTS: dict[str, frozenset[str]] = {
+    "bracelet": frozenset({"necklace", "pendant"}),
+    "necklace": frozenset({"bracelet"}),
+    "pendant": frozenset({"bracelet"}),
+}
 PRICE_RE = re.compile(r"(?:budget around|under|<=|about)?\s*\$\s*([\d]+(?:\.[\d]+)?)", re.I)
 PRICE_EXACT_TOLERANCE = 0.01
 PRICE_NEAR_RATIO = 0.10
@@ -37,6 +53,7 @@ def rerank_candidates(
     phrases = [phrase for phrase in phrases if phrase]
     terms = _unique_terms(phrases)
     category_tokens = _category_tokens(query_text)
+    constraint_types = _product_types_in_text(" ".join(phrases))
     target_price = _target_price(filters, query_text)
     profile = filters.get("profile")
 
@@ -45,7 +62,9 @@ def rerank_candidates(
         product = store.get(asin)
         if product is None:
             continue
-        score = _score_product(product, phrases, terms, category_tokens, target_price, profile)
+        score = _score_product(
+            product, phrases, terms, category_tokens, constraint_types, target_price, profile
+        )
         scored.append((score, -index, asin))
 
     scored.sort(key=lambda item: (item[0], item[1]), reverse=True)
@@ -57,6 +76,7 @@ def _score_product(
     phrases: list[str],
     terms: list[str],
     category_tokens: list[str],
+    constraint_types: set[str],
     target_price: float | None,
     profile: object = None,
 ) -> float:
@@ -71,7 +91,8 @@ def _score_product(
         if term in corpus:
             score += TERM_MATCH_SCORE
 
-    score += _category_score(product, category_tokens)
+    score += _category_score(product, category_tokens, constraint_types)
+    score += _constraint_product_type_score(product, constraint_types)
     score += _price_score(product, target_price)
     score += _popularity_score(product)
 
@@ -83,13 +104,64 @@ def _score_product(
     return score
 
 
-def _category_score(product: ProductMeta, category_tokens: list[str]) -> float:
-    """The stated product type comes from the target's own category path, so it always holds."""
+def _category_score(
+    product: ProductMeta,
+    category_tokens: list[str],
+    constraint_types: set[str],
+) -> float:
+    """Category tokens come from the target's own path, but can mislabel product type."""
     if not category_tokens:
+        return 0.0
+    if constraint_types and _category_conflicts_with_constraints(category_tokens, constraint_types):
         return 0.0
     categories = product.categories.lower()
     matched = sum(1 for token in category_tokens if token in categories)
     return CATEGORY_MATCH_SCORE * matched / len(category_tokens)
+
+
+def _constraint_product_type_score(product: ProductMeta, constraint_types: set[str]) -> float:
+    if not constraint_types:
+        return 0.0
+    product_types = _product_types_in_text(_normalize(product.searchable_text))
+    score = 0.0
+    for constraint_type in constraint_types:
+        if constraint_type in product_types:
+            score += PRODUCT_TYPE_MATCH_SCORE
+    if constraint_types.isdisjoint(product_types):
+        category_types = _product_types_in_text(product.categories.lower())
+        if category_types & _conflicting_types(constraint_types):
+            score -= PRODUCT_TYPE_MISMATCH_PENALTY
+    return score
+
+
+def _product_types_in_text(text: str) -> set[str]:
+    lowered = text.lower()
+    return {
+        type_name
+        for type_name, markers in PRODUCT_TYPE_MARKERS.items()
+        if any(marker in lowered for marker in markers)
+    }
+
+
+def _category_conflicts_with_constraints(
+    category_tokens: list[str],
+    constraint_types: set[str],
+) -> bool:
+    category_types = _product_types_in_text(" ".join(category_tokens))
+    if not category_types:
+        return False
+    for constraint_type in constraint_types:
+        conflicts = PRODUCT_TYPE_CONFLICTS.get(constraint_type, frozenset())
+        if category_types & conflicts:
+            return True
+    return False
+
+
+def _conflicting_types(constraint_types: set[str]) -> set[str]:
+    conflicting: set[str] = set()
+    for constraint_type in constraint_types:
+        conflicting.update(PRODUCT_TYPE_CONFLICTS.get(constraint_type, frozenset()))
+    return conflicting
 
 
 def _price_score(product: ProductMeta, target_price: float | None) -> float:

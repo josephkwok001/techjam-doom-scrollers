@@ -238,14 +238,14 @@ Output: aggregate metrics to stdout; full per-session breakdown in `results.json
 
 | Metric (Pillar IV) | Baseline | Pillar III | Current (tuned) | Stretch |
 |--------|----------|------------|-----------------|---------|
-| Hit Rate@10 (Coverage) | 0.125 | 0.855 | **0.995** | 1.00 |
-| MRR (Precision) | 0.068 | 0.567 | **0.812** | ≥ 0.85 |
-| MTTC (Efficiency) | 9.81 | 4.21 | **2.12** | ≤ 2.0 |
-| TechnicalScore | 0.107 | 0.733 | **0.919** | ≥ 0.93 |
+| Hit Rate@10 (Coverage) | 0.125 | 0.855 | **1.000** | 1.00 |
+| MRR (Precision) | 0.068 | 0.567 | **0.817** | ≥ 0.85 |
+| MTTC (Efficiency) | 9.81 | 4.21 | **2.06** | ≤ 2.0 |
+| TechnicalScore | 0.107 | 0.733 | **0.924** | ≥ 0.93 |
 
-Per scenario at 0.9187: browsing 1.000 hit / 0.781 MRR, buying 0.988 / 0.796,
-intent_override 1.000 / 0.874, boundary 1.000 / 1.000. One miss out of 200 sessions.
-MRR is now the binding constraint — 55 of 199 hits still land at rank 2–10.
+Per scenario at 0.9239: browsing 1.000 hit / 0.781 MRR, buying **1.000** / 0.809,
+intent_override 1.000 / 0.874, boundary 1.000 / 1.000. **Zero misses** on the public set.
+MRR remains the binding constraint — 55 hits still land at rank 2–10.
 
 ### Tuning tools
 

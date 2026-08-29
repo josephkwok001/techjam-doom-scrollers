@@ -1,16 +1,27 @@
 from __future__ import annotations
 
+import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from starter.retrieval.catalog_store import CatalogStore
 from starter.retrieval.feedback import build_retrieval_feedback
-from starter.retrieval.filters import apply_metadata_filters
-from starter.retrieval.query_builder import build_fts_expression, strip_boilerplate, tokenize_terms
+from starter.retrieval.filters import apply_metadata_filters, constraint_phrases
+from starter.retrieval.query_builder import (
+    build_fts_expression,
+    quote_fts,
+    strip_boilerplate,
+    tokenize_terms,
+)
 from starter.retrieval.reranker import rerank_candidates
 
 CANDIDATE_POOL_SIZE = 60
 FALLBACK_BROAD_EXPRESSION = '"clothing" OR "shoes" OR "apparel"'
+# Long marketing phrases are distinctive; rescue them even when BM25 rank > pool size.
+PHRASE_RESCUE_MIN_LEN = 40
+PHRASE_RESCUE_PER_PHRASE = 15
+MAX_RERANK_CANDIDATES = 100
+RESCUE_TERM_LIMIT = 5
 
 
 @dataclass(frozen=True)
@@ -35,7 +46,6 @@ class HybridSearcher:
         filters = filters or {}
         normalized_mode = "buying" if mode == "buying" else "browsing"
         slot_values = _slot_values_from_filters(filters, normalized_mode)
-        pool_size = max(top_k, CANDIDATE_POOL_SIZE)
         relaxed_search = False
 
         # Buying starts from a precision-first AND expression; when nothing satisfies every
@@ -45,6 +55,7 @@ class HybridSearcher:
             expression = _fallback_expression(query_text)
 
         candidate_count = self._store.count_matches(expression)
+        pool_size = max(top_k, CANDIDATE_POOL_SIZE)
         asins = self._store.bm25_search(expression, limit=pool_size)
 
         if not asins and normalized_mode == "buying":
@@ -59,18 +70,21 @@ class HybridSearcher:
             relaxed_search = True
             expression = _fallback_expression(query_text)
             candidate_count = self._store.count_matches(expression)
-            asins = self._store.bm25_search(expression, limit=max(top_k, CANDIDATE_POOL_SIZE))
+            asins = self._store.bm25_search(expression, limit=pool_size)
 
         if not asins:
             relaxed_search = True
-            asins = self._store.all_asins()[: max(top_k, CANDIDATE_POOL_SIZE)]
+            asins = self._store.all_asins()[:pool_size]
             candidate_count = len(self._store.all_asins())
 
         asins = apply_metadata_filters(asins, filters, self._store, normalized_mode)
         if not asins:
             relaxed_search = True
-            asins = self._store.bm25_search(expression, limit=max(top_k, CANDIDATE_POOL_SIZE))
+            asins = self._store.bm25_search(expression, limit=pool_size)
 
+        asins = _expand_with_phrase_rescue(
+            asins, query_text, slot_values, self._store, pool_size
+        )
         asins = rerank_candidates(asins, filters, query_text, slot_values, self._store)
 
         feedback = build_retrieval_feedback(
@@ -79,6 +93,50 @@ class HybridSearcher:
             relaxed_search=relaxed_search,
         )
         return SearchResult(asins=asins[:top_k], feedback=feedback)
+
+
+def _expand_with_phrase_rescue(
+    primary: list[str],
+    query_text: str,
+    slot_values: list[str],
+    store: CatalogStore,
+    pool_size: int,
+) -> list[str]:
+    """Union in catalog items that strongly match a long disclosed phrase.
+
+    Widening the whole BM25 pool (60 -> 100) helped public_0168 but dropped public_0020
+    from rerank #9 to #19; rescuing by phrase adds recall without that side effect.
+    """
+    rescued: list[str] = []
+    for phrase in constraint_phrases(query_text, slot_values):
+        if len(phrase) < PHRASE_RESCUE_MIN_LEN:
+            continue
+        for expression in _rescue_expressions(phrase):
+            try:
+                rescued.extend(store.bm25_search(expression, limit=PHRASE_RESCUE_PER_PHRASE))
+            except sqlite3.OperationalError:
+                continue
+    if not rescued:
+        return primary
+    merged = list(dict.fromkeys(primary + rescued))
+    return merged[: max(pool_size, min(len(merged), MAX_RERANK_CANDIDATES))]
+
+
+def _rescue_expressions(phrase: str) -> list[str]:
+    """Build fallback lookups when intent-card phrases are truncated mid-word."""
+    expressions: list[str] = []
+    if clause := quote_fts(phrase):
+        expressions.append(clause)
+    if " - " in phrase:
+        headline = phrase.split(" - ", 1)[0].strip()
+        if len(headline) >= 20 and (clause := quote_fts(headline)):
+            expressions.append(clause)
+    terms = [quote_fts(term) for term in tokenize_terms(phrase)[:RESCUE_TERM_LIMIT]]
+    terms = [term for term in terms if term]
+    if len(terms) >= 2:
+        expressions.append(" AND ".join(terms))
+    return list(dict.fromkeys(expressions))
+
 
 def _slot_values_from_filters(filters: dict, mode: str = "browsing") -> list[str]:
     values: list[str] = []
