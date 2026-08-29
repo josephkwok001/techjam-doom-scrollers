@@ -18,7 +18,11 @@ from starter.retrieval import (
     rerank_candidates,
     strip_boilerplate,
 )
-from starter.retrieval.search import _slot_values_from_filters
+from starter.retrieval.search import (
+    CANDIDATE_POOL_SIZE,
+    _expand_with_phrase_rescue,
+    _slot_values_from_filters,
+)
 
 
 SAMPLE_CATALOG = [
@@ -152,6 +156,64 @@ class RerankerTest(unittest.TestCase):
             self.store,
         )
         self.assertEqual(ranked[0], "A")
+
+    def test_rerank_prefers_bracelet_when_constraints_say_bracelet_not_pendant(self) -> None:
+        rows = [
+            {
+                "parent_asin": "BRACE",
+                "title": "Mother Daughter Bracelets Set",
+                "categories": ["Clothing, Shoes & Jewelry", "Girls", "Jewelry", "Necklaces & Pendants", "Pendants"],
+                "features": ["Mother Daughter Bracelets - adjustable stainless steel heart bracelet."],
+                "details": {"Material": "Stainless Steel"},
+                "store": "GiftCo",
+                "description": "bracelet gift set",
+                "price": 13.99,
+                "average_rating": 4.4,
+                "rating_number": 800,
+            },
+            {
+                "parent_asin": "NECK",
+                "title": "Mother Daughter Necklace Set Matching Heart Necklaces",
+                "categories": ["Clothing, Shoes & Jewelry", "Girls", "Jewelry", "Necklaces & Pendants", "Pendants"],
+                "features": ["Mother Daughter Necklace - heart pendant necklace for mom and daughter."],
+                "details": {"Material": "Stainless Steel"},
+                "store": "GiftCo",
+                "description": "necklace gift set",
+                "price": 14.99,
+                "average_rating": 4.6,
+                "rating_number": 1200,
+            },
+        ]
+        catalog_path = Path(self._directory.name) / "jewelry.jsonl"
+        catalog_path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+        store = CatalogStore(catalog_path)
+        query = (
+            "I'm looking for Necklaces & Pendants Pendants.\n"
+            "A key requirement is: Mother Daughter Bracelets - adjustable stainless steel heart bracelet."
+        )
+        ranked = rerank_candidates(["NECK", "BRACE"], {}, query, [], store)
+        self.assertEqual(ranked[0], "BRACE")
+
+    def test_soft_constraint_lines_are_scored(self) -> None:
+        query = "For that, what matters is: lightweight mesh upper."
+        ranked = rerank_candidates(["B", "A"], {}, query, [], self.store)
+        self.assertEqual(ranked[0], "A")
+
+
+class PhraseRescueTest(unittest.TestCase):
+    def test_rescue_skips_short_phrases(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            catalog_path = Path(directory) / "catalog.jsonl"
+            catalog_path.write_text(
+                "".join(json.dumps(row) + "\n" for row in SAMPLE_CATALOG),
+                encoding="utf-8",
+            )
+            store = CatalogStore(catalog_path)
+            merged = _expand_with_phrase_rescue(["A"], "what matters is: cotton.", ["cotton"], store, 60)
+            self.assertEqual(merged, ["A"])
+
+    def test_rescue_keeps_primary_pool_size_when_no_long_phrases(self) -> None:
+        self.assertEqual(CANDIDATE_POOL_SIZE, 60)
 
 
 class FeedbackTest(unittest.TestCase):

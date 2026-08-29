@@ -238,14 +238,14 @@ Output: aggregate metrics to stdout; full per-session breakdown in `results.json
 
 | Metric (Pillar IV) | Baseline | Pillar III | Current (tuned) | Stretch |
 |--------|----------|------------|-----------------|---------|
-| Hit Rate@10 (Coverage) | 0.125 | 0.855 | **0.995** | 1.00 |
-| MRR (Precision) | 0.068 | 0.567 | **0.812** | ≥ 0.85 |
-| MTTC (Efficiency) | 9.81 | 4.21 | **2.12** | ≤ 2.0 |
-| TechnicalScore | 0.107 | 0.733 | **0.919** | ≥ 0.93 |
+| Hit Rate@10 (Coverage) | 0.125 | 0.855 | **1.000** | 1.00 |
+| MRR (Precision) | 0.068 | 0.567 | **0.817** | ≥ 0.85 |
+| MTTC (Efficiency) | 9.81 | 4.21 | **2.06** | ≤ 2.0 |
+| TechnicalScore | 0.107 | 0.733 | **0.924** | ≥ 0.93 |
 
-Per scenario at 0.9187: browsing 1.000 hit / 0.781 MRR, buying 0.988 / 0.796,
-intent_override 1.000 / 0.874, boundary 1.000 / 1.000. One miss out of 200 sessions.
-MRR is now the binding constraint — 55 of 199 hits still land at rank 2–10.
+Per scenario at 0.9239: browsing 1.000 hit / 0.781 MRR, buying **1.000** / 0.809,
+intent_override 1.000 / 0.874, boundary 1.000 / 1.000. **Zero misses** on the public set.
+MRR remains the binding constraint — 55 hits still land at rank 2–10.
 
 ### Tuning tools
 
@@ -265,9 +265,15 @@ python3 -m unittest tests.test_retrieval tests.test_personalization tests.test_a
 
 # Full 200-session benchmark (Pillar IV)
 python3 -m evaluator.local_evaluator
+
+# Recordable demo for Devpost video (Monday)
+python3 scripts/demo_session.py scores      # benchmark summary
+python3 scripts/demo_session.py browsing    # 3-turn scripted session
+python3 scripts/demo_session.py buying      # buying-mode session
+python3 scripts/demo_session.py replay public_0001
 ```
 
-Interactive demo and single-session replay patterns: [docs/pillars.md](docs/pillars.md#manual-testing-beyond-the-evaluator).
+Devpost copy outline: [docs/devpost_outline.md](docs/devpost_outline.md).
 
 ---
 
@@ -281,6 +287,8 @@ starter/
 scripts/
   score.py                      One evaluation run, compact metrics
   sweep.py                      Weight grid sweep over a shared catalog index
+  sweep_mrr.py                  MRR reranker knob sweep
+  demo_session.py               Recordable terminal demo for Devpost video
 tests/
   test_retrieval.py
   test_personalization.py
@@ -289,6 +297,7 @@ tests/
 docs/
   pillars.md                    Official Pillar I–IV notes + improvement matrix
   tuning_log.md                 What moved the score, and what did not
+  devpost_outline.md            Devpost + demo video script for submission
 evaluator/local_evaluator.py    Pillar IV scorer (do not edit)
 ```
 

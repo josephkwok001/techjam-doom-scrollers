@@ -96,10 +96,10 @@ Outputs aggregate + `scenario_metrics` in `results.json`.
 
 | Metric | Baseline | Post I+II | With Pillar III | Tuned |
 |--------|----------|-----------|-----------------|-------|
-| Hit Rate@10 (Coverage) | 0.125 | 0.755 | 0.855 | **0.995** |
-| MRR (Precision) | 0.068 | 0.468 | 0.567 | **0.812** |
-| MTTC (Efficiency) | 9.81 | 6.13 | 4.21 | **2.12** |
-| TechnicalScore | 0.107 | 0.615 | 0.733 | **0.919** |
+| Hit Rate@10 (Coverage) | 0.125 | 0.755 | 0.855 | 0.995 | **1.000** |
+| MRR (Precision) | 0.068 | 0.468 | 0.567 | 0.812 | **0.817** |
+| MTTC (Efficiency) | 9.81 | 6.13 | 4.21 | 2.12 | **2.06** |
+| TechnicalScore | 0.107 | 0.615 | 0.733 | 0.919 | **0.924** |
 
 Experiment-by-experiment record, including the changes that made things worse and the
 defects found on the way: [tuning_log.md](tuning_log.md).

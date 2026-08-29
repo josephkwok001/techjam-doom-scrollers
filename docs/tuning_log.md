@@ -25,6 +25,22 @@ Two histograms located almost all of the recoverable score:
 | 6 | BM25 features/details 2.5 → 4.0 | 0.9124 | +0.001 |
 | 7 | Drop whole utterances from slot phrases | 0.9165 | +0.004 |
 | 8 | Candidate pool 80 → 60 | 0.9187 | +0.002 |
+| 9 | Phrase rescue + product-type conflict handling | 0.9239 | +0.005 |
+
+### 9. Phrase rescue + product-type conflict (public_0168 fix)
+
+The lone miss (`public_0168`) had the target at BM25 rank **74** with pool **60**. Widening
+the whole pool to 100 fixed that session but broke `public_0020` (rerank #9 → #19, out of
+top 10).
+
+**Phrase rescue** keeps pool 60 and unions in ASINs found by:
+- the long phrase itself (when it FTS-matches),
+- its headline segment before `" - "` (works when intent-card text is truncated mid-word),
+- an AND of the phrase's distinctive tokens.
+
+**Product-type conflict** disables the category-path boost when disclosed constraints say
+`bracelet` but the category path says `pendants`, and boosts/penalizes by constraint type
+instead. This promoted the miscategorized bracelet target over necklace competitors.
 
 ### 1. Question policy (the dominant fix)
 
