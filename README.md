@@ -146,6 +146,29 @@ python3 scripts/demo_session.py replay public_0001
 python3 scripts/score.py mylabel
 ```
 
+### Demo UI (hackathon showcase)
+
+A React + FastAPI UI wraps the same `Agent` for live chat, product cards, dialog/profile internals, and one-click scripted demos. It is **not** part of the scored submission.
+
+From the repository root, install once:
+
+```bash
+python3 -m pip install -r demo/requirements.txt
+cd demo/web && npm install && cd ../..
+```
+
+Then run both processes:
+
+```bash
+# Terminal 1 — API (indexes the catalog once, ~3s)
+python3 -m uvicorn demo.server:app --host 127.0.0.1 --port 8000
+
+# Terminal 2 — UI
+cd demo/web && npm run dev
+```
+
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Use **Play browsing**, **Play buying**, or **Replay hit** (`public_0001`) for a recordable walkthrough, or type freely in the chat.
+
 ---
 
 ## Repository structure
@@ -161,6 +184,9 @@ tests/                     # Unit tests for retrieval, dialog, personalization
 scripts/
   demo_session.py          # Terminal demo for Devpost video
   score.py                 # One-shot evaluator with histograms
+demo/
+  server.py                # FastAPI wrapper for the showcase UI
+  web/                     # Vite + React demo SPA
 docs/
   pillars.md               # Pillar framework and metrics
   tuning_log.md            # Experiment log (0.107 → 0.925)

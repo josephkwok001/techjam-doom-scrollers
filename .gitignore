@@ -17,3 +17,5 @@ docs/participant_release_checklist.md
 tests/test_5core_builder.py
 tests/test_organizer_pipeline.py
 *.log
+demo/web/node_modules/
+demo/web/dist/
