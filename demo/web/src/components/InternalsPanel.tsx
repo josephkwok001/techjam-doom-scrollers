@@ -1,4 +1,5 @@
 import type { DialogState, UserProfile } from "../api";
+import { formatSlotDisplay } from "../slotDisplay";
 
 const ATTRIBUTES = [
   "category",
@@ -16,11 +17,6 @@ function statusStyle(status: string): string {
   if (status === "confirmed") return "bg-[#7dce9a] text-[#102016]";
   if (status === "unconstrained") return "bg-[#e8c27a]/20 text-[#e8c27a]";
   return "bg-white/8 text-[#b9a894]";
-}
-
-function truncate(value: string | null, limit = 72): string {
-  if (!value) return "—";
-  return value.length > limit ? `${value.slice(0, limit - 1)}…` : value;
 }
 
 type Props = {
@@ -65,9 +61,13 @@ export default function InternalsPanel({ dialog, profile }: Props) {
                 <span className={`mt-0.5 shrink-0 rounded-full px-1.5 py-0.5 capitalize ${statusStyle(status)}`}>
                   {status === "confirmed" ? "set" : status === "unconstrained" ? "any" : "—"}
                 </span>
-                <span className="min-w-0">
-                  <span className="font-medium capitalize text-[#f4efe6]">{attribute.replace("_", " ")}</span>
-                  <span className="block truncate text-[#8a7d70]">{truncate(value, 64)}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium capitalize text-[#f4efe6]">
+                    {attribute.replace("_", " ")}
+                  </span>
+                  <span className="block break-words whitespace-normal leading-snug text-[#8a7d70]">
+                    {formatSlotDisplay(attribute, value)}
+                  </span>
                 </span>
               </li>
             );
@@ -91,7 +91,9 @@ export default function InternalsPanel({ dialog, profile }: Props) {
           ))}
         </div>
         <p className="mt-2 text-xs text-[#b9a894]">{profile?.rating_style ?? "—"}</p>
-        <p className="mt-1 text-xs leading-relaxed text-[#8a7d70]">{profile?.summary ?? ""}</p>
+        <p className="mt-1 break-words text-xs leading-relaxed text-[#8a7d70]">
+          {profile?.summary ?? ""}
+        </p>
       </section>
 
       <section className="mt-5">
@@ -112,7 +114,7 @@ export default function InternalsPanel({ dialog, profile }: Props) {
             </dd>
           </div>
         </dl>
-        <p className="mt-2 text-xs text-[#8a7d70]">
+        <p className="mt-2 break-words text-xs text-[#8a7d70]">
           Missing:{" "}
           {(feedback.missing_attributes ?? []).length > 0
             ? (feedback.missing_attributes ?? []).join(", ")

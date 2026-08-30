@@ -47,7 +47,7 @@ Offline: **0 tokens**, in-memory SQLite FTS5, no API keys.
 ## Demo video script (~2 min)
 
 1. **Intro (15s)** — problem + pillar diagram
-2. **Live demo (60s)** — `python3 scripts/demo_session.py browsing`
+2. **Live demo (60s)** — `python3 scripts/demo_session.py browsing` (or the optional UI at [http://127.0.0.1:5173](http://127.0.0.1:5173) — see README)
 3. **Replay hit (30s)** — `python3 scripts/demo_session.py replay public_0001`
 4. **Benchmark (20s)** — `python3 scripts/demo_session.py scores`
 5. **Close (15s)** — offline, team split, limitation (MRR ~0.82, tuned on public set)

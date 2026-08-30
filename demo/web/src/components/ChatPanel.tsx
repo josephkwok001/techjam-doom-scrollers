@@ -1,4 +1,4 @@
-import { useEffect, useRef, type FormEvent } from "react";
+import { useEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
 import type { ChatLine } from "../api";
 
 type Props = {
@@ -12,18 +12,29 @@ type Props = {
 
 export default function ChatPanel({ lines, turn, playing, busy, error, onSend }: Props) {
   const bottom = useRef<HTMLDivElement>(null);
-  const input = useRef<HTMLInputElement>(null);
+  const input = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth" });
   }, [lines, busy]);
 
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
+  function submit() {
     const value = input.current?.value.trim() ?? "";
     if (!value || busy || playing || turn >= 10) return;
     onSend(value);
     if (input.current) input.current.value = "";
+  }
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    submit();
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      submit();
+    }
   }
 
   return (
@@ -43,7 +54,7 @@ export default function ChatPanel({ lines, turn, playing, busy, error, onSend }:
         {lines.map((line) => (
           <div
             key={line.id}
-            className={`max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+            className={`max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed break-words whitespace-pre-wrap ${
               line.role === "user"
                 ? "ml-auto bg-[#e8c27a] text-[#1b1713]"
                 : "bg-[#2a241e] text-[#f4efe6]"
@@ -69,17 +80,23 @@ export default function ChatPanel({ lines, turn, playing, busy, error, onSend }:
       {error && <p className="px-4 pb-2 text-xs text-[#e07a6e]">{error}</p>}
 
       <form onSubmit={handleSubmit} className="border-t border-white/8 p-3">
-        <div className="flex gap-2">
-          <input
+        <div className="flex items-end gap-2">
+          <textarea
             ref={input}
+            rows={2}
             disabled={busy || playing || turn >= 10}
-            placeholder={turn >= 10 ? "Session complete" : "Describe what you want…"}
-            className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#241f1a] px-3 py-2.5 text-sm text-[#f4efe6] outline-none placeholder:text-[#7d7164] focus:border-[#e8c27a]/50"
+            onKeyDown={handleKeyDown}
+            placeholder={
+              turn >= 10
+                ? "Session complete"
+                : "Describe what you want… (Enter to send, Shift+Enter for newline)"
+            }
+            className="min-w-0 flex-1 resize-none break-words whitespace-pre-wrap rounded-xl border border-white/10 bg-[#241f1a] px-3 py-2.5 text-sm leading-relaxed text-[#f4efe6] outline-none placeholder:text-[#7d7164] focus:border-[#e8c27a]/50 disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={busy || playing || turn >= 10}
-            className="rounded-xl bg-[#e8c27a] px-4 text-sm font-semibold text-[#1b1713] disabled:opacity-40"
+            className="shrink-0 rounded-xl bg-[#e8c27a] px-4 py-2.5 text-sm font-semibold text-[#1b1713] disabled:opacity-40"
           >
             Send
           </button>
