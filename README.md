@@ -58,6 +58,7 @@ Per scenario: browsing 1.000 hit · buying 1.000 hit · intent_override 1.000 hi
 ### Requirements
 
 - **Python 3.10+** (3.12 tested)
+- **Node.js 18+ / npm** (LTS recommended for the optional demo UI)
 - **git**
 - ~20 MB disk for the compressed catalog; ~50 MB decompressed
 
@@ -154,12 +155,25 @@ Optional showcase only (not part of the scored agent). After the catalog is in p
 
 ```bash
 python3 -m pip install -r demo/requirements.txt
-cd demo/web && npm install && cd ../..
-python3 -m uvicorn demo.server:app --host 127.0.0.1 --port 8000   # terminal 1
-cd demo/web && npm run dev                                         # terminal 2
+cd demo/web
+npm install
+cd ../..
 ```
 
-Open [http://127.0.0.1:5173](http://127.0.0.1:5173).
+Then start the backend in one terminal:
+
+```bash
+python3 -m uvicorn demo.server:app --host 127.0.0.1 --port 8000
+```
+
+And start the frontend in a second terminal:
+
+```bash
+cd demo/web
+npm run dev
+```
+
+Finally, open [http://127.0.0.1:5173](http://127.0.0.1:5173) to view the demo UI.
 
 ---
 
