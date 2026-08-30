@@ -19,6 +19,8 @@ Customers rarely state every requirement upfront. Our agent plays both **shop as
 
 **Stack:** Python 3.10+, standard library only for the core path. No LLM API keys required. Zero inference tokens.
 
+We also ship an **optional demo UI** (`demo/`) — a local React front-end for live chat and product cards. It is not scored; see [Try the demo UI](#try-the-demo-ui) below.
+
 ### Architecture
 
 ```text
@@ -146,6 +148,19 @@ python3 scripts/demo_session.py replay public_0001
 python3 scripts/score.py mylabel
 ```
 
+### Try the demo UI
+
+Optional showcase only (not part of the scored agent). After the catalog is in place:
+
+```bash
+python3 -m pip install -r demo/requirements.txt
+cd demo/web && npm install && cd ../..
+python3 -m uvicorn demo.server:app --host 127.0.0.1 --port 8000   # terminal 1
+cd demo/web && npm run dev                                         # terminal 2
+```
+
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173).
+
 ---
 
 ## Repository structure
@@ -161,6 +176,9 @@ tests/                     # Unit tests for retrieval, dialog, personalization
 scripts/
   demo_session.py          # Terminal demo for Devpost video
   score.py                 # One-shot evaluator with histograms
+demo/
+  server.py                # FastAPI wrapper for the showcase UI
+  web/                     # Vite + React demo SPA
 docs/
   pillars.md               # Pillar framework and metrics
   tuning_log.md            # Experiment log (0.107 → 0.925)
@@ -213,7 +231,7 @@ Full contract: [docs/agent_api_contract.json](docs/agent_api_contract.json)
 |--------|------|----------------|
 | **Joseph** | Pillar I · retrieval lead | `starter/retrieval/`: BM25 index, query builder, metadata filters, heuristic reranker, phrase rescue, buying/browsing search paths; evaluation harnesses (`scripts/score.py`, tuning sweeps); integration testing |
 | **JY** | Pillar II · dialog lead | `starter/agent.py`: session state, slot parsing, buying/browsing intent routing, `ask_attribute` question policy, intent override and boundary handling |
-| **Both** | Pillars III & IV | `starter/personalization/`: profile signals, rerank boosts, question priority; evaluator-driven tuning, documentation, demo and Devpost materials |
+| **Both** | Pillars III & IV | `starter/personalization/`: profile signals, rerank boosts, question priority; evaluator-driven tuning, documentation, demo UI (`demo/`), and Devpost materials |
 
 ---
 
