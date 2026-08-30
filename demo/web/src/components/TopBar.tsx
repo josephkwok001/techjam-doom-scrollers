@@ -1,11 +1,3 @@
-const SCORES = [
-  { label: "TechnicalScore", value: "0.925" },
-  { label: "Hit@10", value: "1.000" },
-  { label: "MRR", value: "0.82" },
-  { label: "MTTC", value: "2.07" },
-  { label: "Tokens", value: "0" },
-];
-
 type Props = {
   turn: number;
   playing: boolean;
@@ -24,20 +16,6 @@ export default function TopBar({ turn, playing, catalogSize, onNewSession, onPla
         <p className="text-[11px] uppercase tracking-[0.16em] text-[#b9a894]">
           Conversational e-commerce search
         </p>
-      </div>
-
-      <div className="flex flex-wrap gap-1.5">
-        {SCORES.map((chip) => (
-          <div
-            key={chip.label}
-            className="rounded-full border border-[#e8c27a]/20 bg-[#e8c27a]/8 px-2.5 py-1"
-          >
-            <span className="mr-1.5 text-[10px] uppercase tracking-wider text-[#b9a894]">
-              {chip.label}
-            </span>
-            <span className="font-semibold text-[#e8c27a]">{chip.value}</span>
-          </div>
-        ))}
       </div>
 
       <div className="ml-auto flex flex-wrap items-center gap-2">

@@ -12,13 +12,15 @@ const GENERIC_SIZE = new Set(["size"]);
 
 const ATTRIBUTE_TERMS: Record<string, readonly string[]> = {
   category: ["looking for", "need", "want", "shoes", "dress", "shirt", "bag", "jewelry", "boots"],
-  material: ["leather", "cotton", "wool", "linen", "suede", "silk", "denim", "material"],
+  material: ["leather", "cotton", "wool", "linen", "suede", "silk", "denim", "material",
+    "mesh", "polyester", "nylon", "canvas", "fleece", "knit", "spandex", "rubber"],
   color: ["black", "white", "blue", "red", "green", "brown", "pink", "grey", "gray", "color"],
   size: ["size", "small", "medium", "large", " xs ", " s ", " m ", " l ", " xl "],
   style: ["style", "casual", "formal", "vintage", "minimalist", "classic", "sporty"],
   brand: ["brand"],
   budget: ["$", "budget", "under", "less than", "cheap", "affordable", "price"],
-  feature: ["feature", "waterproof", "comfortable", "durable", "pockets", "slip resistant"],
+  feature: ["feature", "waterproof", "comfortable", "durable", "pockets", "slip resistant",
+    "lightweight", "breathable", "cushioned", "cushion", "supportive", "stretch"],
   use_case: ["for work", "for running", "for hiking", "for a wedding", "for travel", "gift", "occasion"],
 };
 

@@ -37,10 +37,10 @@ python3 -m evaluator.local_evaluator
 
 | Metric | Baseline | Ours |
 |--------|----------|------|
-| TechnicalScore | 0.107 | **~0.925** |
+| TechnicalScore | 0.107 | **~0.926** |
 | Hit Rate@10 | 0.125 | **1.000** |
-| MRR | 0.068 | **~0.820** |
-| MTTC | 9.81 | **~2.07** |
+| MRR | 0.068 | **~0.827** |
+| MTTC | 9.81 | **~2.11** |
 
 Offline: **0 tokens**, in-memory SQLite FTS5, no API keys.
 
@@ -50,12 +50,12 @@ Offline: **0 tokens**, in-memory SQLite FTS5, no API keys.
 2. **Live demo (60s)** — `python3 scripts/demo_session.py browsing` (or the optional UI at [http://127.0.0.1:5173](http://127.0.0.1:5173) — see README)
 3. **Replay hit (30s)** — `python3 scripts/demo_session.py replay public_0001`
 4. **Benchmark (20s)** — `python3 scripts/demo_session.py scores`
-5. **Close (15s)** — offline, team split, limitation (MRR ~0.82, tuned on public set)
+5. **Close (15s)** — offline, team split, limitation (MRR ~0.83, tuned on public set)
 
 ## Limitations (honest)
 
 - Weights tuned on the public 200 sessions; private holdout may differ.
-- MRR ~0.82: 55 sessions hit at rank 2–10 (near-duplicate phrase matches).
+- MRR ~0.83: 53 of 200 sessions hit at rank 2–10 (near-duplicate phrase matches).
 - Buying strict AND path rarely matches; recall-first fallback does the work.
 
 ## Team contributions

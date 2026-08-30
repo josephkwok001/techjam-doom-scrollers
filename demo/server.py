@@ -34,14 +34,16 @@ ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "data" / "catalog.jsonl"
 PUBLIC_SET = ROOT / "data" / "public_set.jsonl"
 
+# Plain shopper phrasing rather than the evaluator's templated wording, so the
+# showcase reads like a real conversation on camera.
 BROWSING_TURNS = [
-    "I'm looking for running shoes, but I'm still exploring.",
-    "For that, what matters is: lightweight mesh upper; cushioned sole.",
-    "For that, what matters is: budget around $60; good for daily training.",
+    "I'm looking for hiking boots, but I'm still exploring.",
+    "I need them waterproof and lightweight",
+    "I want them under $70",
 ]
 BUYING_TURNS = [
-    "I'm looking for women's running shoes. A key requirement is: breathable mesh upper.",
-    "For that, what matters is: lightweight; suitable for road running.",
+    "I want men's leather hiking boots that are waterproof",
+    "I need them under $70 in brown",
 ]
 
 agent: Agent | None = None
