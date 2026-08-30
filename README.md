@@ -43,10 +43,10 @@ Reproduced with `python3 -m evaluator.local_evaluator` on our latest commit:
 
 | Metric | Baseline starter | Our agent |
 |--------|------------------|-----------|
-| **TechnicalScore** | 0.107 | **0.925** |
+| **TechnicalScore** | 0.107 | **0.926** |
 | Hit Rate@10 | 0.125 | **1.000** |
-| MRR | 0.068 | **0.820** |
-| MTTC (turns) | 9.81 | **2.07** |
+| MRR | 0.068 | **0.827** |
+| MTTC (turns) | 9.81 | **2.11** |
 | Token usage | — | **0** |
 
 Per scenario: browsing 1.000 hit · buying 1.000 hit · intent_override 1.000 hit · boundary 1.000 hit.
@@ -117,10 +117,10 @@ python3 -m evaluator.local_evaluator
 Expected aggregate output (approximate):
 
 ```text
-TechnicalScore ≈ 0.925
+TechnicalScore ≈ 0.926
 Hit Rate@10    = 1.000
-MRR            ≈ 0.820
-MTTC           ≈ 2.07
+MRR            ≈ 0.827
+MTTC           ≈ 2.11
 ```
 
 The command writes per-session details to `results.json` (gitignored locally).
@@ -196,7 +196,7 @@ demo/
   web/                     # Vite + React demo SPA
 docs/
   pillars.md               # Pillar framework and metrics
-  tuning_log.md            # Experiment log (0.107 → 0.925)
+  tuning_log.md            # Experiment log (0.107 → 0.926)
   devpost_outline.md       # Devpost copy + video script
   agent_api_contract.json  # Required API schema
 agent.md                   # Team architecture guide
@@ -225,7 +225,7 @@ Full contract: [docs/agent_api_contract.json](docs/agent_api_contract.json)
 
 **Public-set tuning.** Weights were tuned on the 200 public development sessions. The private holdout may behave differently; we prioritized broad plateaus over knife-edge optima.
 
-**MRR ceiling (~0.82).** Hit rate is 1.000 on the public set, but ~55 sessions still land at rank 2–10 instead of rank 1. Near-duplicate products often match the same disclosed marketing phrases; substring reranking alone cannot always separate them.
+**MRR ceiling (~0.83).** Hit rate is 1.000 on the public set, but 53 of 200 sessions still land at rank 2–10 instead of rank 1. Near-duplicate products often match the same disclosed marketing phrases; substring reranking alone cannot always separate them.
 
 **Buying strict path.** The conjunctive buying FTS expression rarely matches real products; recall-first fallback + reranking does the actual work.
 

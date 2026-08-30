@@ -11,17 +11,24 @@ class AgentRoutingTest(unittest.TestCase):
         self.state = {
             "intent": "browsing",
             "intent_locked": False,
-            "exploratory_session": False,
         }
 
     def test_key_requirement_routes_to_buying(self) -> None:
         self.agent._route_intent(self.state, "A key requirement is: waterproof.")
         self.assertEqual(self.state["intent"], "buying")
 
-    def test_exploratory_route_stays_broad_after_constraint(self) -> None:
+    def test_hedge_keeps_route_broad(self) -> None:
+        self.agent._route_intent(self.state, "I'm looking for shoes, but I'm still exploring.")
+        self.assertEqual(self.state["intent"], "browsing")
+
+    def test_constraint_after_hedge_switches_to_buying(self) -> None:
         self.agent._route_intent(self.state, "I'm still exploring.")
         self.agent._route_intent(self.state, "For that, what matters is: blue.")
-        self.assertEqual(self.state["intent"], "browsing")
+        self.assertEqual(self.state["intent"], "buying")
+
+    def test_plain_request_routes_to_buying(self) -> None:
+        self.agent._route_intent(self.state, "I want running shoes")
+        self.assertEqual(self.state["intent"], "buying")
 
     def test_override_can_leave_exploratory_route(self) -> None:
         self.agent._route_intent(self.state, "I'm still exploring.")

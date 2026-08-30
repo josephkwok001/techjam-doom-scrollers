@@ -25,32 +25,37 @@ type Props = {
 };
 
 export default function InternalsPanel({ dialog, profile }: Props) {
-  const feedback = dialog?.retrieval_feedback ?? {};
   const tags = profile?.preference_tags ?? [];
+  const buying = dialog?.intent === "buying";
 
   return (
     <aside className="flex min-h-0 flex-col overflow-y-auto border-l border-white/8 bg-[#181410] px-4 py-4">
       <h2 className="text-sm font-semibold text-[#f4efe6]">How it works</h2>
-      <p className="mt-1 text-xs text-[#b9a894]">Live dialog, profile, and retrieval loop</p>
+      <p className="mt-1 text-xs text-[#b9a894]">Live state, updated every turn</p>
 
       <section className="mt-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8a7d70]">
-          Pillar II · Intent
+          Intent
         </p>
         <span
-          className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
-            dialog?.intent === "buying"
+          className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+            buying
               ? "bg-[#8b3a32]/80 text-[#f8e4e1]"
               : "bg-[#3d5c4a] text-[#e4f0e8]"
           }`}
         >
-          {dialog?.intent ?? "browsing"}
+          {buying ? "Buying" : "Browsing"}
         </span>
+        <p className="mt-1.5 text-xs leading-snug text-[#8a7d70]">
+          {buying
+            ? "Narrowing to stated requirements"
+            : "Still exploring, keeping options open"}
+        </p>
       </section>
 
       <section className="mt-5">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8a7d70]">
-          Pillar II · Slots
+          What the shopper has told us
         </p>
         <ul className="mt-2 space-y-1.5">
           {ATTRIBUTES.map((attribute) => {
@@ -77,7 +82,7 @@ export default function InternalsPanel({ dialog, profile }: Props) {
 
       <section className="mt-5">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8a7d70]">
-          Pillar III · Profile
+          Shopper profile
         </p>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {tags.length === 0 && <span className="text-xs text-[#8a7d70]">No tags</span>}
@@ -91,38 +96,6 @@ export default function InternalsPanel({ dialog, profile }: Props) {
           ))}
         </div>
         <p className="mt-2 text-xs text-[#b9a894]">{profile?.rating_style ?? "—"}</p>
-        <p className="mt-1 break-words text-xs leading-relaxed text-[#8a7d70]">
-          {profile?.summary ?? ""}
-        </p>
-      </section>
-
-      <section className="mt-5">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8a7d70]">
-          Pillar I · Retrieval
-        </p>
-        <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
-          <div className="rounded-lg bg-[#241f1a] px-2.5 py-2">
-            <dt className="text-[#8a7d70]">Candidates</dt>
-            <dd className="text-base font-semibold text-[#f4efe6]">
-              {feedback.candidate_count ?? "—"}
-            </dd>
-          </div>
-          <div className="rounded-lg bg-[#241f1a] px-2.5 py-2">
-            <dt className="text-[#8a7d70]">Pool</dt>
-            <dd className="text-base font-semibold text-[#f4efe6]">
-              {feedback.overloaded ? "Overloaded" : "OK"}
-            </dd>
-          </div>
-        </dl>
-        <p className="mt-2 break-words text-xs text-[#8a7d70]">
-          Missing:{" "}
-          {(feedback.missing_attributes ?? []).length > 0
-            ? (feedback.missing_attributes ?? []).join(", ")
-            : "none"}
-        </p>
-        {feedback.relaxed_search && (
-          <p className="mt-1 text-xs text-[#e8c27a]">Relaxed / phrase-rescue path used</p>
-        )}
       </section>
     </aside>
   );

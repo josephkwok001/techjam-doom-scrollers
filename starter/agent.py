@@ -8,16 +8,30 @@ from starter.retrieval.search import HybridSearcher
 ATTRIBUTES = ("category", "material", "color", "size", "style", "brand", "budget", "feature", "use_case")
 OVERRIDE_MARKERS = ("actually", "instead", "never mind", "nevermind", "forget that", "change of plans", "i meant", "rather")
 EXHAUSTED_MARKERS = ("additional preference", "no other requirement")
+BROWSING_MARKERS = (
+    "still exploring", "just browsing", "show me options",
+    "looking for ideas", "not sure what", "surprise me",
+)
+# Explicit constraint phrasing the evaluator's simulated customer uses.
+BUYING_MARKERS = (
+    "key requirement is", "what matters is", "what i need is",
+    "must have", "under $", "budget around $", "size ",
+)
+# Plain phrasing a live shopper types. The evaluator never produces these, so they
+# only affect interactive sessions.
+INTENT_MARKERS = ("i want", "i need", "looking for", "find me", "show me a")
 # The final turn's question is never answered, so clarification stops one turn early.
 LAST_ACTIONABLE_TURN = 10
 ATTRIBUTE_TERMS = {
     "category": ("looking for", "need", "want", "shoes", "dress", "shirt", "bag", "jewelry", "boots"),
-    "material": ("leather", "cotton", "wool", "linen", "suede", "silk", "denim", "material"),
+    "material": ("leather", "cotton", "wool", "linen", "suede", "silk", "denim", "material",
+                 "mesh", "polyester", "nylon", "canvas", "fleece", "knit", "spandex", "rubber"),
     "color": ("black", "white", "blue", "red", "green", "brown", "pink", "grey", "gray", "color"),
     "size": ("size", "small", "medium", "large", " xs ", " s ", " m ", " l ", " xl "),
     "style": ("style", "casual", "formal", "vintage", "minimalist", "classic", "sporty"),
     "brand": ("brand",), "budget": ("$", "budget", "under", "less than", "cheap", "affordable", "price"),
-    "feature": ("feature", "waterproof", "comfortable", "durable", "pockets", "slip resistant"),
+    "feature": ("feature", "waterproof", "comfortable", "durable", "pockets", "slip resistant",
+                "lightweight", "breathable", "cushioned", "cushion", "supportive", "stretch"),
     "use_case": ("for work", "for running", "for hiking", "for a wedding", "for travel", "gift", "occasion"),
 }
 
@@ -38,7 +52,6 @@ class Agent:
             "unconstrained": set(), "asked": [], "history": [],
             "override_pending": False, "retrieval_feedback": {},
             "intent": "browsing", "intent_locked": False,
-            "exploratory_session": False,
             "requirements_exhausted": False,
         }
 
@@ -73,25 +86,18 @@ class Agent:
         return {attribute: message.strip() for attribute, terms in ATTRIBUTE_TERMS.items() if any(term in text for term in terms)}
 
     def _route_intent(self, state: dict, message: str) -> None:
-        """Pillar 1 routing on the official reset/respond execution path."""
+        """Pillar 1 routing on the official reset/respond execution path.
+
+        A hedge on the current message keeps retrieval broad, but it does not latch:
+        once the shopper states a concrete constraint, later turns switch to the
+        precision-first path even if the session opened exploratory.
+        """
         if state.get("intent_locked"):
             return
         lowered = message.lower()
-        browsing_markers = (
-            "still exploring", "just browsing", "show me options",
-            "looking for ideas", "not sure what", "surprise me",
-        )
-        buying_markers = (
-            "key requirement is", "what matters is", "what i need is",
-            "must have", "under $", "budget around $", "size ",
-        )
-        if any(marker in lowered for marker in browsing_markers):
+        if any(marker in lowered for marker in BROWSING_MARKERS):
             state["intent"] = "browsing"
-            state["exploratory_session"] = True
-        elif any(marker in lowered for marker in buying_markers) and (
-            not state.get("exploratory_session")
-            or any(marker in lowered for marker in OVERRIDE_MARKERS)
-        ):
+        elif any(marker in lowered for marker in BUYING_MARKERS + INTENT_MARKERS):
             state["intent"] = "buying"
 
     def _apply_message(self, state: dict, message: str) -> None:
