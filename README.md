@@ -58,7 +58,6 @@ Per scenario: browsing 1.000 hit · buying 1.000 hit · intent_override 1.000 hi
 ### Requirements
 
 - **Python 3.10+** (3.12 tested)
-- **Node.js 18+ / npm** (LTS recommended for the optional demo UI)
 - **git**
 - ~20 MB disk for the compressed catalog; ~50 MB decompressed
 
@@ -151,7 +150,9 @@ python3 scripts/score.py mylabel
 
 ### Try the demo UI
 
-Optional showcase only (not part of the scored agent). After the catalog is in place:
+Optional showcase only (not part of the scored agent). This requires **Node.js 18+ / npm**.
+
+After the catalog is in place:
 
 ```bash
 python3 -m pip install -r demo/requirements.txt
